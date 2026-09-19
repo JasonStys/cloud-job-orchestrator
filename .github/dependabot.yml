@@ -1,0 +1,23 @@
+# File: Keeps Rust, npm, container, Terraform, and GitHub Actions dependencies visible and grouped.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule: {interval: weekly}
+    groups:
+      rust-dependencies: {patterns: ["*"]}
+  - package-ecosystem: npm
+    directory: /web
+    schedule: {interval: weekly}
+    groups:
+      dashboard-dependencies: {patterns: ["*"]}
+  - package-ecosystem: docker
+    directory: /
+    schedule: {interval: weekly}
+  - package-ecosystem: terraform
+    directory: /infra/terraform
+    schedule: {interval: weekly}
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: {interval: weekly}
+

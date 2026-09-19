@@ -1,0 +1,10 @@
+/target/
+/web/dist/
+/web/node_modules/
+.env
+*.log
+coverage/
+docs/reports/local-*.txt
+**/.terraform/
+*.tfstate
+*.tfstate.*

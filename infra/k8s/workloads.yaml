@@ -1,0 +1,81 @@
+# File: Deploys independently scalable control-plane and worker processes with hardened pods.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: control-plane
+  namespace: job-orchestrator
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: control-plane}
+  template:
+    metadata:
+      labels: {app: control-plane}
+    spec:
+      serviceAccountName: orchestrator
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: control-plane
+          image: ghcr.io/jasonstys/cloud-job-orchestrator:1.0.0
+          ports: [{name: http, containerPort: 8080}]
+          envFrom: [{secretRef: {name: orchestrator-database}}]
+          readinessProbe: {httpGet: {path: /health/ready, port: http}, initialDelaySeconds: 3}
+          livenessProbe: {httpGet: {path: /health/live, port: http}, initialDelaySeconds: 10}
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 500m, memory: 256Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: job-orchestrator
+spec:
+  replicas: 3
+  selector:
+    matchLabels: {app: worker}
+  template:
+    metadata:
+      labels: {app: worker}
+    spec:
+      serviceAccountName: orchestrator
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: worker
+          image: ghcr.io/jasonstys/cloud-job-orchestrator:1.0.0
+          command: ["orchestrator-worker"]
+          envFrom: [{secretRef: {name: orchestrator-database}}]
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: 300m, memory: 192Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: orchestrator
+  namespace: job-orchestrator
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: control-plane
+  namespace: job-orchestrator
+spec:
+  selector: {app: control-plane}
+  ports: [{name: http, port: 80, targetPort: http}]
+

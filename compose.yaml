@@ -1,0 +1,47 @@
+# File: Runs a local PostgreSQL control plane plus two bounded workers for demonstrations.
+services:
+  database:
+    image: postgres:18.6-alpine
+    environment:
+      POSTGRES_DB: orchestrator
+      POSTGRES_USER: orchestrator
+      POSTGRES_PASSWORD: local-development-only
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orchestrator -d orchestrator"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - database-data:/var/lib/postgresql/data
+
+  control-plane:
+    build: .
+    environment:
+      DATABASE_URL: postgres://orchestrator:local-development-only@database/orchestrator
+      RUST_LOG: info
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+
+  worker:
+    build: .
+    entrypoint: ["orchestrator-worker"]
+    environment:
+      DATABASE_URL: postgres://orchestrator:local-development-only@database/orchestrator
+      WORKER_ID: compose-worker
+    depends_on:
+      database:
+        condition: service_healthy
+    deploy:
+      replicas: 2
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+
+volumes:
+  database-data:

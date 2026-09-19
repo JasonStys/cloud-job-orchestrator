@@ -1,0 +1,32 @@
+/* File: Responsive, high-contrast dashboard presentation with state-specific visual cues. */
+:root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #081017; color: #e8f4f5; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; background: radial-gradient(circle at 15% 0, #153941 0, #081017 42%); }
+main { width: min(1120px, calc(100% - 2rem)); margin: 0 auto; padding: 4rem 0; }
+header { max-width: 760px; }
+.eyebrow { color: #6fe7c8; font: 700 .75rem/1.2 ui-monospace, monospace; letter-spacing: .18em; }
+h1 { margin: .4rem 0; font-size: clamp(2.6rem, 7vw, 5.4rem); line-height: .95; letter-spacing: -.06em; }
+header > p:last-child { color: #9bb0b5; font-size: 1.1rem; }
+.toolbar, .panel { margin-top: 2rem; border: 1px solid #28434a; background: #0c1820e6; border-radius: 14px; padding: 1rem; }
+.toolbar { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+label { font-weight: 700; }
+select, button { border: 1px solid #3e626a; border-radius: 8px; padding: .65rem .8rem; background: #10262e; color: inherit; }
+button { background: #6fe7c8; color: #062019; font-weight: 800; cursor: pointer; }
+button:focus-visible, select:focus-visible { outline: 3px solid #f7c95e; outline-offset: 2px; }
+button:disabled { opacity: .55; cursor: wait; }
+#status { color: #9bb0b5; }
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: .8rem; margin-top: 1rem; }
+.metric { padding: 1rem; border-left: 4px solid #799099; background: #102129; border-radius: 8px; }
+.metric strong, .metric span { display: block; }
+.metric strong { font-size: 2rem; }
+.metric span { color: #a9bdc1; text-transform: capitalize; }
+.state-ready { border-color: #f7c95e; } .state-leased { border-color: #69b7ff; } .state-succeeded { border-color: #6fe7c8; }
+.state-retry-wait { border-color: #ff9e64; } .state-dead-lettered, .state-cancelled { border-color: #ff708d; }
+.panel h2 { margin-top: 0; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: .8rem; text-align: left; border-bottom: 1px solid #203940; }
+th { color: #9bb0b5; font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; }
+@media (max-width: 600px) { main { padding: 2rem 0; } .toolbar > * { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
+

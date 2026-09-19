@@ -1,0 +1,34 @@
+# File: Adds disruption, autoscaling, and default-deny network controls for the deployment.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: control-plane
+  namespace: job-orchestrator
+spec:
+  minAvailable: 1
+  selector: {matchLabels: {app: control-plane}}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: worker
+  namespace: job-orchestrator
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: worker}
+  minReplicas: 1
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 70}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: job-orchestrator
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+

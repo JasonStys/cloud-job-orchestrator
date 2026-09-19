@@ -1,0 +1,9 @@
+# File: Keeps local caches, secrets, and version-control metadata out of container contexts.
+.git
+.github
+target
+web/node_modules
+web/dist
+.env
+docs
+

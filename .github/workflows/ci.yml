@@ -1,0 +1,177 @@
+# File: Runs portable, database, web, script, infrastructure, container, and dependency quality gates.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust-portable:
+    name: Rust portable (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install pinned Rust toolchain
+        run: rustup show
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Run warning-free Clippy
+        run: cargo clippy --all-targets --locked -- -D warnings
+      - name: Run portable tests
+        run: cargo test --all-targets --locked
+      - name: Validate example DAG
+        run: cargo run --locked --bin orchestratorctl -- validate examples/release-dag.json
+      - name: Build release binaries
+        run: cargo build --release --locked --bins
+
+  postgres-integration:
+    name: PostgreSQL leases and migrations
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18.6-alpine
+        env:
+          POSTGRES_DB: orchestrator_test
+          POSTGRES_USER: orchestrator
+          POSTGRES_PASSWORD: integration-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U orchestrator -d orchestrator_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://orchestrator:integration-only@127.0.0.1:5432/orchestrator_test
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install pinned Rust toolchain
+        run: rustup show
+      - name: Test migrations, concurrent claims, and lease recovery
+        run: cargo test --locked --test postgres_integration -- --test-threads=1
+
+  web:
+    name: TypeScript dashboard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install locked dependencies
+        run: npm --prefix web ci --ignore-scripts
+      - name: Audit dependencies
+        run: npm --prefix web audit --audit-level=high
+      - name: Compile, test, and build
+        run: npm --prefix web run validate
+      - name: Upload dashboard artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: operations-dashboard
+          path: web/dist
+          if-no-files-found: error
+          retention-days: 14
+
+  repository-and-scripts:
+    name: Repository and recovery policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Verify exact declaration index
+        run: npm run code-index:check
+      - name: Validate repository and infrastructure policy
+        run: npm run validate
+      - name: Check Bash syntax
+        run: bash -n scripts/backup.sh scripts/restore-drill.sh scripts/smoke-test.sh
+      - name: Run ShellCheck
+        run: shellcheck scripts/backup.sh scripts/restore-drill.sh scripts/smoke-test.sh
+      - name: Install Bats
+        run: sudo apt-get update && sudo apt-get install --yes bats
+      - name: Run recovery guard tests
+        run: bats scripts/tests/recovery.bats
+      - name: Verify generated evidence is current
+        run: git diff --exit-code
+
+  infrastructure:
+    name: Terraform and Compose
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.16.3
+          terraform_wrapper: false
+      - name: Check Terraform formatting
+        run: terraform -chdir=infra/terraform fmt -check -recursive
+      - name: Initialize without backend
+        run: terraform -chdir=infra/terraform init -backend=false -input=false
+      - name: Validate Terraform
+        run: terraform -chdir=infra/terraform validate
+      - name: Validate Compose model
+        run: docker compose config --quiet
+
+  container:
+    name: Non-root container build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.0.0
+      - name: Build release image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.0.0
+        with:
+          context: .
+          push: false
+          tags: cloud-job-orchestrator:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  rustsec:
+    name: Rust dependency audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      checks: write
+      issues: write
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Audit Cargo.lock
+        uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}

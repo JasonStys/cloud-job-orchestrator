@@ -1,0 +1,13 @@
+{
+  "id": "release_demo",
+  "jobs": [
+    {"id": "prepare", "kind": "uppercase", "payload": "release candidate", "max_attempts": 3, "priority": 10},
+    {"id": "digest", "kind": "checksum", "payload": "artifact-v1", "max_attempts": 3, "priority": 5},
+    {"id": "cooldown", "kind": "delay", "payload": "25", "max_attempts": 2, "priority": 0}
+  ],
+  "dependencies": [
+    {"from": "prepare", "to": "digest"},
+    {"from": "digest", "to": "cooldown"}
+  ]
+}
+

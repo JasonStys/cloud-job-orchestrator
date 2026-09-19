@@ -1,0 +1,38 @@
+<!doctype html>
+<!-- File: Accessible operations dashboard shell; dynamic values are inserted through textContent only. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Inspect bounded DAG jobs, leases, retries, and terminal states.">
+  <title>Job Control Plane</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">DURABLE · BOUNDED · OBSERVABLE</p>
+      <h1>Job Control Plane</h1>
+      <p>Follow a workflow from dependency release through lease ownership and terminal state.</p>
+    </header>
+    <section class="toolbar" aria-label="DAG controls">
+      <label for="dag-select">Workflow</label>
+      <select id="dag-select" aria-describedby="status"></select>
+      <button id="refresh" type="button">Refresh</button>
+      <span id="status" role="status" aria-live="polite">Loading…</span>
+    </section>
+    <section id="summary" class="summary" aria-label="State summary"></section>
+    <section class="panel" aria-labelledby="jobs-title">
+      <h2 id="jobs-title">Jobs</h2>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th scope="col">Job</th><th scope="col">State</th><th scope="col">Attempts</th><th scope="col">Lease owner</th></tr></thead>
+          <tbody id="jobs"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
+

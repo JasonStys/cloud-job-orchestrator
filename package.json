@@ -1,0 +1,12 @@
+{
+  "name": "cloud-job-orchestrator-quality-gates",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "code-index": "node scripts/generate-code-index.mjs",
+    "code-index:check": "node scripts/generate-code-index.mjs --check",
+    "validate": "node scripts/validate-repository.mjs && node scripts/validate-infrastructure.mjs"
+  }
+}
+

@@ -1,0 +1,8 @@
+# File: Isolates orchestrator workloads and labels the namespace for restricted pod security.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: job-orchestrator
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+
