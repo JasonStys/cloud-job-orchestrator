@@ -31,5 +31,4 @@ Cancellation changes every non-terminal job to `cancelled`, clears lease fields,
 
 ## Admission and boundedness
 
-The reference scheduler accepts at most 100 DAGs and 10,000 ready jobs by default. Each DAG has at most 1,000 jobs, payload/result fields are at most 4 KiB, priority is -100..100, and attempts are 1..20. Deployed admission quotas should additionally be scoped per authenticated tenant.
-
+The reference scheduler accepts at most 100 DAGs and 10,000 ready jobs by default. Each DAG has at most 1,000 jobs and 10,000 dependency edges; both limits are checked before graph working memory is allocated. Payload/result fields are at most 4 KiB, priority is -100..100, and attempts are 1..20. Deployed admission quotas should additionally be scoped per authenticated tenant.
