@@ -1,6 +1,6 @@
 //! File: Defines serializable job, graph, lease, and snapshot value objects.
 //! Functions: `JobKind::validate_payload` constrains synthetic work; `DagSpec::validate` validates graph input.
-//! Variables: identifiers are caller-selected strings with strict length/character limits; payloads are bounded.
+//! Variables: identifiers, graph cardinality, and payloads have explicit admission limits.
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
@@ -9,6 +9,7 @@ use thiserror::Error;
 pub const MAX_DAG_ID_BYTES: usize = 64;
 pub const MAX_JOB_ID_BYTES: usize = 64;
 pub const MAX_JOBS_PER_DAG: usize = 1_000;
+pub const MAX_DEPENDENCIES_PER_DAG: usize = 10_000;
 pub const MAX_PAYLOAD_BYTES: usize = 4_096;
 
 /// Fixed, harmless worker operations. Arbitrary commands are intentionally not representable.
@@ -77,9 +78,12 @@ impl DagSpec {
         if self.jobs.is_empty() || self.jobs.len() > MAX_JOBS_PER_DAG {
             return Err(ValidationError::InvalidJobCount);
         }
+        if self.dependencies.len() > MAX_DEPENDENCIES_PER_DAG {
+            return Err(ValidationError::InvalidDependencyCount);
+        }
 
-        let mut indegree = HashMap::with_capacity(self.jobs.len());
-        let mut outgoing: HashMap<&str, Vec<&str>> = HashMap::with_capacity(self.jobs.len());
+        let mut indegree = HashMap::new();
+        let mut outgoing: HashMap<&str, Vec<&str>> = HashMap::new();
         for job in &self.jobs {
             validate_identifier(&job.id, MAX_JOB_ID_BYTES)?;
             job.kind.validate_payload(&job.payload)?;
@@ -117,7 +121,7 @@ impl DagSpec {
             .collect();
         zero.sort_unstable();
         let mut queue: VecDeque<&str> = zero.into();
-        let mut order = Vec::with_capacity(self.jobs.len());
+        let mut order = Vec::new();
         while let Some(id) = queue.pop_front() {
             order.push(id.to_owned());
             if let Some(children) = outgoing.get(id) {
@@ -190,6 +194,8 @@ pub enum ValidationError {
     InvalidIdentifier(String),
     #[error("DAG must contain 1..=1000 jobs")]
     InvalidJobCount,
+    #[error("DAG must contain at most 10000 dependencies")]
+    InvalidDependencyCount,
     #[error("duplicate job identifier: {0}")]
     DuplicateJob(String),
     #[error("dependency references unknown job: {0}")]
@@ -206,7 +212,7 @@ pub enum ValidationError {
 
 #[cfg(test)]
 mod tests {
-    use super::{DagSpec, Dependency, JobKind, JobSpec, ValidationError};
+    use super::{DagSpec, Dependency, JobKind, JobSpec, MAX_DEPENDENCIES_PER_DAG, ValidationError};
 
     fn job(id: &str) -> JobSpec {
         JobSpec {
@@ -257,5 +263,20 @@ mod tests {
             ],
         };
         assert_eq!(dag.validate(), Err(ValidationError::Cycle));
+    }
+
+    #[test]
+    fn excessive_dependency_count_is_rejected_before_graph_allocation() {
+        let dependency = Dependency {
+            from: "a".to_owned(),
+            to: "b".to_owned(),
+        };
+        let dag = DagSpec {
+            id: "bounded".to_owned(),
+            jobs: vec![job("a"), job("b")],
+            dependencies: vec![dependency; MAX_DEPENDENCIES_PER_DAG + 1],
+        };
+
+        assert_eq!(dag.validate(), Err(ValidationError::InvalidDependencyCount));
     }
 }

@@ -1,6 +1,8 @@
 # Validation Report
 
-Generated for release `1.0.0` on 2026-09-18. The committed report describes the deterministic gate contract; GitHub Actions links are added after publication.
+Generated for release `1.0.0` on 2026-09-18. The committed report describes the deterministic gate contract and links to the current remote evidence.
+
+Remote evidence: [CI workflow](https://github.com/JasonStys/cloud-job-orchestrator/actions/workflows/ci.yml) and [CodeQL workflow](https://github.com/JasonStys/cloud-job-orchestrator/actions/workflows/codeql.yml).
 
 | Gate | Expected evidence | Local result |
 |---|---|---|
