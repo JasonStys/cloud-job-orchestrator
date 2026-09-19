@@ -7,7 +7,7 @@ Untrusted actors may submit malformed graphs, oversized content, cycles, forged 
 ## Controls
 
 - The worker operation is an enum; no shell, executable path, URL fetch, or arbitrary code field exists.
-- Identifiers, graph size, payload/result size, priority, attempts, lease duration, connection count, and page size are bounded.
+- Identifiers, job and dependency counts, payload/result size, priority, attempts, lease duration, connection count, and page size are bounded. Graph cardinality is rejected before graph working memory is allocated.
 - DAGs are cycle-checked before one-transaction insertion.
 - Lease tokens use UUID v4; every mutation checks owner, token, state, and expiry.
 - SQL values are bound parameters. Table/state names are static.
@@ -24,4 +24,3 @@ Place the API behind authenticated TLS ingress. Map identity to tenant-aware aut
 ## Reporting
 
 Do not open a public issue for a suspected vulnerability. Use GitHub's private vulnerability reporting feature if enabled for the repository, or contact the repository owner privately through the profile contact channel.
-

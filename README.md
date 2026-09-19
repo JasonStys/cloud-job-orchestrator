@@ -1,5 +1,8 @@
 # Cloud Job Orchestrator
 
+[![CI](https://github.com/JasonStys/cloud-job-orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/JasonStys/cloud-job-orchestrator/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/JasonStys/cloud-job-orchestrator/actions/workflows/codeql.yml/badge.svg)](https://github.com/JasonStys/cloud-job-orchestrator/actions/workflows/codeql.yml)
+
 A production-minded control plane for safe directed-acyclic-graph (DAG) workloads. Rust services validate dependencies, PostgreSQL coordinates concurrent workers with expiring compare-and-set leases, a dependency-free TypeScript dashboard exposes state, and Bash/Terraform/Kubernetes assets cover recovery and deployment.
 
 The project demonstrates backend and cloud engineering without exposing a remote command runner. Workers can execute only three bounded synthetic operations: delay (maximum five seconds), SHA-256 checksum, and uppercase transformation.
