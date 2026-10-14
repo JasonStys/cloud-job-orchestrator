@@ -1,5 +1,5 @@
 # File: Builds the Rust services and TypeScript dashboard into a minimal non-root runtime image.
-FROM node:24.10.0-bookworm-slim AS web-build
+FROM node:26.8.2-bookworm-slim AS web-build
 WORKDIR /workspace/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --ignore-scripts
