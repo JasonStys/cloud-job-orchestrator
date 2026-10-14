@@ -6,7 +6,7 @@ RUN npm ci --ignore-scripts
 COPY web/ ./
 RUN npm run build
 
-FROM rust:1.98.1-bookworm AS rust-build
+FROM rust:1.99.0-bookworm AS rust-build
 WORKDIR /workspace
 COPY Cargo.toml Cargo.lock ./
 COPY migrations ./migrations
