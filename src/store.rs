@@ -2,9 +2,9 @@
 //! Functions: connect, migrate, submit, claim, heartbeat, complete, fail, reap, cancel, snapshot, and list.
 //! Variables: `pool` is a bounded, cloneable connection pool; all state changes are database transactions.
 
+use crate::database::{self as sqlx, PgPool, Postgres, Row, Transaction, postgres::PgPoolOptions};
 use crate::domain::{DagSnapshot, DagSpec, JobKind, JobSnapshot, JobState, ValidationError};
 use crate::scheduler::ClaimedJob;
-use sqlx::{PgPool, Postgres, Row, Transaction, postgres::PgPoolOptions};
 use std::time::Duration;
 use thiserror::Error;
 use time::OffsetDateTime;
@@ -16,6 +16,12 @@ pub struct PostgresStore {
 }
 
 impl PostgresStore {
+    #[cfg(test)]
+    pub(crate) fn disconnected_test_store() -> Self {
+        Self {
+            pool: PgPoolOptions::new().connect_lazy_with(sqlx::postgres::PgConnectOptions::new()),
+        }
+    }
     /// Opens a bounded pool with fail-fast acquisition behavior.
     pub async fn connect(database_url: &str, max_connections: u32) -> Result<Self, StoreError> {
         if !(1..=100).contains(&max_connections) {
@@ -31,7 +37,7 @@ impl PostgresStore {
 
     /// Applies embedded, checksummed migrations before serving traffic.
     pub async fn migrate(&self) -> Result<(), StoreError> {
-        sqlx::migrate!().run(&self.pool).await?;
+        embedded_migrator().run(&self.pool).await?;
         Ok(())
     }
 
@@ -307,10 +313,24 @@ impl PostgresStore {
 
     /// Reads one DAG and its jobs in stable order.
     pub async fn snapshot(&self, dag_id: &str) -> Result<DagSnapshot, StoreError> {
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
+            .execute(&mut *tx)
+            .await?;
+        let snapshot = Self::snapshot_in_transaction(&mut tx, dag_id).await?;
+        tx.commit().await?;
+        Ok(snapshot)
+    }
+
+    /// Keep existence and job rows inside the caller's captured read-only database snapshot.
+    async fn snapshot_in_transaction(
+        tx: &mut Transaction<'_, Postgres>,
+        dag_id: &str,
+    ) -> Result<DagSnapshot, StoreError> {
         let exists =
             sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM dags WHERE id = $1)")
                 .bind(dag_id)
-                .fetch_one(&self.pool)
+                .fetch_one(&mut **tx)
                 .await?;
         if !exists {
             return Err(StoreError::NotFound);
@@ -320,7 +340,7 @@ impl PostgresStore {
              FROM jobs WHERE dag_id = $1 ORDER BY id",
         )
         .bind(dag_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut **tx)
         .await?;
         let mut jobs = Vec::with_capacity(rows.len());
         for row in rows {
@@ -342,6 +362,63 @@ impl PostgresStore {
         Ok(DagSnapshot {
             id: dag_id.to_owned(),
             jobs,
+        })
+    }
+
+    /// Capture jobs, dependencies, database clock and newest 200 event metadata rows in one transaction.
+    pub async fn inspection(
+        &self,
+        dag_id: &str,
+    ) -> Result<crate::inspection::DagInspection, StoreError> {
+        use crate::inspection::{DagInspection, ObservedEvent, explain};
+        let mut tx = self.pool.begin().await?;
+        sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
+            .execute(&mut *tx)
+            .await?;
+        let observed: OffsetDateTime = sqlx::query_scalar("SELECT CURRENT_TIMESTAMP")
+            .fetch_one(&mut *tx)
+            .await?;
+        let mut snapshot = Self::snapshot_in_transaction(&mut tx, dag_id).await?;
+        // Operational evidence does not need application result content.
+        for job in &mut snapshot.jobs {
+            job.result = None;
+        }
+        let rows = sqlx::query("SELECT parent_id, child_id FROM job_dependencies WHERE dag_id=$1 ORDER BY parent_id, child_id LIMIT 10001").bind(dag_id).fetch_all(&mut *tx).await?;
+        let dependencies = rows
+            .into_iter()
+            .map(|row| {
+                Ok(crate::Dependency {
+                    from: row.try_get("parent_id")?,
+                    to: row.try_get("child_id")?,
+                })
+            })
+            .collect::<Result<Vec<_>, sqlx::Error>>()?;
+        let mut rows = sqlx::query("SELECT sequence, job_id, event_type, attempt, occurred_at FROM job_events WHERE dag_id=$1 ORDER BY sequence DESC LIMIT 201").bind(dag_id).fetch_all(&mut *tx).await?;
+        let events_truncated = rows.len() > 200;
+        rows.truncate(200);
+        let events = rows
+            .into_iter()
+            .map(|row| {
+                Ok(ObservedEvent {
+                    sequence: row.try_get::<i64, _>("sequence")?.to_string(),
+                    job_id: row.try_get("job_id")?,
+                    event_type: row.try_get("event_type")?,
+                    attempt: row.try_get("attempt")?,
+                    occurred_at_ms: unix_millis(row.try_get("occurred_at")?),
+                })
+            })
+            .collect::<Result<Vec<_>, sqlx::Error>>()?;
+        let observed_at_ms = unix_millis(observed);
+        let explanations = explain(&snapshot, &dependencies, observed_at_ms)?;
+        tx.commit().await?;
+        Ok(DagInspection {
+            snapshot,
+            observed_at_ms,
+            dependencies,
+            explanations,
+            events,
+            events_truncated,
+            notice: "Read-only captured database state. Countdown values refer to this snapshot, not a live clock. Expired leases are not reaped here. The newest 200 recorded events may omit older history; absent events do not prove absence of work. Terminal ancestors are dependency blockers, not inferred causes of their failures.",
         })
     }
 
@@ -380,6 +457,45 @@ impl PostgresStore {
         .await?
         .rows_affected();
         Ok(changed)
+    }
+}
+
+/// Keep the original compile-time SQL bytes/checksums and `SQLx` locking without unrelated macro database drivers.
+fn embedded_migrator() -> sqlx::migrate::Migrator {
+    use sqlx::migrate::{Migration, MigrationType, Migrator};
+    Migrator::with_migrations(vec![Migration::new(
+        1,
+        "control plane".into(),
+        MigrationType::Simple,
+        sqlx::SqlStr::from_static(include_str!("../migrations/0001_control_plane.sql")),
+        false,
+    )])
+}
+
+#[cfg(test)]
+mod migration_tests {
+    use crate::database as sqlx;
+    /// Compare the complete original file-source contract so adding a migration cannot silently omit it from embedding.
+    #[tokio::test]
+    async fn embedded_migrations_match_original_file_source()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let disk = sqlx::migrate::Migrator::new(std::path::Path::new("migrations")).await?;
+        let embedded = super::embedded_migrator();
+        let metadata = |m: &sqlx::migrate::Migration| {
+            (
+                m.version,
+                m.description.to_string(),
+                m.migration_type,
+                m.sql.as_str().to_owned(),
+                m.checksum.to_vec(),
+                m.no_tx,
+            )
+        };
+        assert_eq!(
+            disk.iter().map(metadata).collect::<Vec<_>>(),
+            embedded.iter().map(metadata).collect::<Vec<_>>()
+        );
+        Ok(())
     }
 }
 

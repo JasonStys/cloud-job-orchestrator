@@ -1,6 +1,7 @@
 /target/
 /web/dist/
 /web/node_modules/
+/web/test-results/
 .env
 *.log
 coverage/

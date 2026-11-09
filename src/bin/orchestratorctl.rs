@@ -4,7 +4,7 @@
 
 use clap::{Parser, Subcommand};
 use cloud_job_orchestrator::{DagSpec, PostgresStore};
-use std::{fs, path::PathBuf};
+use std::{fs, io::Read, path::PathBuf};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -21,6 +21,16 @@ struct Cli {
 enum Command {
     Validate {
         file: PathBuf,
+    },
+    /// Produce dependency-only waves without database access or submission.
+    Plan {
+        file: PathBuf,
+    },
+    /// Read captured dependency, retry, lease and bounded event evidence.
+    Inspect {
+        dag_id: String,
+        #[arg(long, env = "DATABASE_URL")]
+        database_url: String,
     },
     Submit {
         file: PathBuf,
@@ -52,6 +62,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let order = spec.validate()?;
             println!("valid DAG {}: {}", spec.id, order.join(" -> "));
         }
+        Command::Plan { file } => {
+            let report = cloud_job_orchestrator::inspection::plan(&read_spec(&file)?)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        Command::Inspect {
+            dag_id,
+            database_url,
+        } => {
+            let report = connect(&database_url).await?.inspection(&dag_id).await?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
         Command::Submit { file, database_url } => {
             let spec = read_spec(&file)?;
             let store = connect(&database_url).await?;
@@ -81,11 +102,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn read_spec(path: &PathBuf) -> Result<DagSpec, Box<dyn std::error::Error>> {
-    let metadata = fs::metadata(path)?;
-    if metadata.len() > 1_000_000 {
+    let file = fs::File::open(path)?;
+    if !file.metadata()?.is_file() {
+        return Err("ordinary DAG file required".into());
+    }
+    let mut bytes = Vec::new();
+    file.take(1_000_001).read_to_end(&mut bytes)?;
+    if bytes.len() > 1_000_000 {
         return Err("DAG input exceeds 1 MB".into());
     }
-    Ok(serde_json::from_str(&fs::read_to_string(path)?)?)
+    Ok(serde_json::from_slice(&bytes)?)
 }
 
 async fn connect(database_url: &str) -> Result<PostgresStore, Box<dyn std::error::Error>> {

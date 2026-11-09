@@ -20,6 +20,13 @@ Returns `201 {"dag_id":"release_demo"}`. Invalid DAGs return `422`; duplicate ID
 
 ## List and inspect
 
+`POST /v1/plans` validates the same closed DAG contract without persistence or
+execution and returns dependency-only waves. `GET /v1/dags/{id}/inspection`
+captures jobs, dependencies, database clock and a newest-first 200-event metadata
+window in one read-only repeatable-read transaction. See the
+[field/CLI/dashboard guide](WORKFLOW_INSPECTION.md) for truncation, lease deadlines,
+result redaction and interpretation.
+
 - `GET /v1/dags?after=<id>&limit=25` returns `items` and a keyset `next_cursor`. Limit range is 1–100.
 - `GET /v1/dags/{id}` returns jobs ordered by ID with state, attempts, availability, lease metadata, and result.
 - `POST /v1/dags/{id}/cancel` revokes unfinished leases and returns the count transitioned.

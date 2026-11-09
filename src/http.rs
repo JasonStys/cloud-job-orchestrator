@@ -2,7 +2,7 @@
 //! Functions: `router` assembles routes; handlers validate input and delegate transactions to `PostgresStore`.
 //! Variables: `AppState` contains only a cloneable pool wrapper; request bodies have Axum's default size limit.
 
-use crate::{DagSpec, JobState, PostgresStore, StoreError};
+use crate::{DagSpec, JobState, PostgresStore, StoreError, database as sqlx};
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
@@ -31,16 +31,15 @@ pub fn router(state: AppState) -> Router {
         .route("/health/ready", get(ready))
         .route("/metrics", get(metrics))
         .route("/v1/dags", post(submit).get(list_dags))
+        .route("/v1/plans", post(dry_run_plan))
         .route("/v1/dags/{dag_id}", get(snapshot))
+        .route("/v1/dags/{dag_id}/inspection", get(inspection))
         .route("/v1/dags/{dag_id}/cancel", post(cancel))
         .route("/v1/leases/claim", post(claim))
         .route("/v1/leases/heartbeat", post(heartbeat))
         .route("/v1/leases/complete", post(complete))
         .route("/v1/leases/fail", post(fail))
-        .nest_service(
-            "/",
-            ServeDir::new("web/public").append_index_html_on_directories(true),
-        )
+        .fallback_service(ServeDir::new("web/dist").append_index_html_on_directories(true))
         .layer(PropagateRequestIdLayer::x_request_id())
         .layer(SetRequestIdLayer::new(
             HeaderName::from_static("x-request-id"),
@@ -82,6 +81,22 @@ async fn submit(
     Ok((StatusCode::CREATED, Json(json!({"dag_id": spec.id}))))
 }
 
+/// Validate without persistence or worker execution; original request body cap remains enforced.
+async fn dry_run_plan(
+    Json(spec): Json<DagSpec>,
+) -> Result<Json<crate::inspection::GraphPlan>, ApiError> {
+    crate::inspection::plan(&spec)
+        .map(Json)
+        .map_err(|error| ApiError::Store(StoreError::Validation(error)))
+}
+
+async fn inspection(
+    State(state): State<AppState>,
+    Path(dag_id): Path<String>,
+) -> Result<Json<crate::inspection::DagInspection>, ApiError> {
+    Ok(Json(state.store.inspection(&dag_id).await?))
+}
+
 #[derive(Debug, Deserialize)]
 struct ListQuery {
     after: Option<String>,
@@ -101,7 +116,11 @@ async fn list_dags(
         .store
         .list_dags(query.after.as_deref(), query.limit)
         .await?;
-    let next = dags.last().cloned();
+    let next = if dags.len() == usize::from(query.limit) {
+        dags.last().cloned()
+    } else {
+        None
+    };
     Ok(Json(json!({"items": dags, "next_cursor": next})))
 }
 
@@ -290,4 +309,41 @@ fn is_unique_violation(error: &sqlx::Error) -> bool {
         .and_then(sqlx::error::DatabaseError::code)
         .as_deref()
         == Some("23505")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{body::Body, http::Request};
+    use tower::ServiceExt;
+
+    /// Exercise the real body/router/JSON boundary with a pool that never connects.
+    #[tokio::test]
+    async fn structural_plan_does_not_touch_database_and_rejects_unknown_fields()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let app = router(AppState {
+            store: PostgresStore::disconnected_test_store(),
+        });
+        let body = include_str!("../examples/release-dag.json");
+        let response = app
+            .clone()
+            .oneshot(
+                Request::post("/v1/plans")
+                    .header("content-type", "application/json")
+                    .body(Body::from(body))?,
+            )
+            .await?;
+        assert_eq!(response.status(), StatusCode::OK);
+        let mut value: Value = serde_json::from_str(body)?;
+        value["execute"] = json!("forbidden");
+        let response = app
+            .oneshot(
+                Request::post("/v1/plans")
+                    .header("content-type", "application/json")
+                    .body(Body::from(value.to_string()))?,
+            )
+            .await?;
+        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        Ok(())
+    }
 }

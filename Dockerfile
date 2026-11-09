@@ -22,7 +22,7 @@ WORKDIR /app
 COPY --from=rust-build /workspace/target/release/orchestratord /usr/local/bin/orchestratord
 COPY --from=rust-build /workspace/target/release/orchestrator-worker /usr/local/bin/orchestrator-worker
 COPY --from=rust-build /workspace/target/release/orchestratorctl /usr/local/bin/orchestratorctl
-COPY --from=web-build /workspace/web/dist ./web/public
+COPY --from=web-build /workspace/web/dist ./web/dist
 USER 10001:10001
 EXPOSE 8080
 ENTRYPOINT ["orchestratord"]
