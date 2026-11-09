@@ -3,7 +3,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 
 const repository = resolve(import.meta.dirname, "..");
-const sourceRoots = ["src", "tests", "web/src", "web/tests", "scripts", "migrations"];
+const sourceRoots = ["src", "tests", "web/src", "web/tests", "web/browser", "web/scripts", "scripts", "migrations"];
 const outputPath = resolve(repository, "docs/CODE_INDEX.md");
 const accepted = /\.(?:rs|ts|mjs|sh|bats|sql)$/;
 const patterns = [

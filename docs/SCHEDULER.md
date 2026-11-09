@@ -2,7 +2,7 @@
 
 ## Graph validation
 
-Kahn's algorithm builds indegrees and outgoing adjacency once. Each vertex enters the queue once and each edge is examined once, so time and memory are O(V + E). Stable sorting of newly available IDs makes validation output deterministic.
+Kahn's algorithm builds indegrees and outgoing adjacency once. Each vertex enters the queue once and each edge is examined once. Stable sorting of newly available IDs gives a conservative O((V + E) log V) time bound, with O(V + E) graph memory. Duplicate edges are rejected before persistence.
 
 ## Ready ordering
 

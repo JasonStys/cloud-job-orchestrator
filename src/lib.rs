@@ -2,8 +2,10 @@
 //! Modules: `domain`, `scheduler`, `store`, `http`, and `worker`.
 //! Variables: no mutable global state; callers own scheduler or database state explicitly.
 
+pub mod database;
 pub mod domain;
 pub mod http;
+pub mod inspection;
 pub mod scheduler;
 pub mod store;
 pub mod worker;

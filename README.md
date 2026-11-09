@@ -9,10 +9,12 @@ The project demonstrates backend and cloud engineering without exposing a remote
 
 ## What it demonstrates
 
-- O(V + E) cycle detection and deterministic topological ordering.
+- Bounded graph validation and deterministic topological ordering; O((V + E) log V) including ordering.
 - O(log n) in-memory priority scheduling for the executable reference model.
 - Transactional PostgreSQL claims using `FOR UPDATE SKIP LOCKED`.
 - Lease heartbeats, expiry recovery, stale-worker rejection, retries, dead-lettering, and cancellation.
+- Read-only dependency-wave previews before submission, captured dependency/lease/retry explanations and bounded attempt-event review.
+- Selection-preserving dashboard pagination, explicit empty/error/stale states and captured JSON downloads.
 - Concurrent worker tests against a real PostgreSQL 18 service in CI.
 - Keyset pagination, bounded payloads, bounded connection pools, and admission limits.
 - Structured JSON logs, request IDs, health probes, and Prometheus-compatible readiness output.
@@ -64,6 +66,8 @@ Open `http://127.0.0.1:8080` for the operations dashboard. The Compose credentia
 | `POST /v1/dags` | Validate and atomically submit a DAG. |
 | `GET /v1/dags` | List DAG IDs using a bounded keyset page. |
 | `GET /v1/dags/{id}` | Read a stable job-state snapshot. |
+| `POST /v1/plans` | Validate and preview structural dependency waves without submission/execution. |
+| `GET /v1/dags/{id}/inspection` | Capture dependencies, state, countdowns and newest 200 event metadata records together. |
 | `POST /v1/dags/{id}/cancel` | Cancel unfinished jobs and revoke leases. |
 | `POST /v1/leases/claim` | Claim one eligible job. |
 | `POST /v1/leases/heartbeat` | Extend a live owner/token lease. |
@@ -80,18 +84,24 @@ The full request, response, and error contract is in [API](docs/API.md).
 | `src/scheduler.rs` | Deterministic heap scheduler and lease state-machine reference implementation. |
 | `src/store.rs` | PostgreSQL migrations, transactional claims, CAS heartbeats/results, recovery, and pagination. |
 | `src/http.rs` | Versioned Axum routes, error mapping, request IDs, tracing, and same-origin dashboard serving. |
+| `src/inspection.rs` | Read-only dependency planning and captured blocker/lease/retry explanations. |
+| `src/database.rs` | Pinned PostgreSQL-only SQLx imports; unrelated drivers/macros are absent. |
 | `src/worker.rs` | Fixed safe-operation executor; no shell or arbitrary process capability. |
 | `src/bin/orchestratord.rs` | Control-plane process entry point. |
 | `src/bin/orchestrator_worker.rs` | Durable polling worker entry point. |
 | `src/bin/orchestratorctl.rs` | Validation, submission, status, cancellation, and reaping CLI. |
 | `migrations/` | Relational state machine, constraints, append-only events, and claim/expiry indexes. |
 | `tests/` | Property, state-machine, PostgreSQL concurrency, and lease-expiry tests. |
+| `tests/inspection.rs`, `web/browser/dashboard.spec.ts` | Independent graph/countdown/CLI oracles and desktop/mobile operator journeys. |
 | `web/` | Strict TypeScript dashboard, accessible HTML/CSS, and Node tests. |
 | `scripts/` | Backup, guarded restore, smoke test, documentation index, and policy validation. |
+| `scripts/verify-live.mjs` | Actual owned API/dashboard/worker/PostgreSQL acceptance with exact output checks. |
 | `infra/k8s/` | Restricted workloads, service, probes, resource limits, PDB, HPA, and network policy. |
 | `infra/terraform/` | Version-pinned namespace/configuration module with validated variables. |
 | `.github/workflows/` | Cross-platform, integration, infrastructure, container, audit, and CodeQL gates. |
 | `docs/` | Architecture, API, schema, security, test, operations, recovery, limitations, ADR, and evidence. |
+| `docs/WORKFLOW_INSPECTION.md` | End-to-end planning/inspection guide, fields, complexity and limits. |
+| `docs/reports/PRACTICAL_WORKFLOWS_20261109.md` | Observed local evidence and explicit hosted acceptance boundaries. |
 
 Every source file begins with a purpose/function/variable header. [The generated code index](docs/CODE_INDEX.md) records exact declaration line locations and CI fails when it is stale.
 

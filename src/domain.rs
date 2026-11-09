@@ -3,7 +3,7 @@
 //! Variables: identifiers, graph cardinality, and payloads have explicit admission limits.
 
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use thiserror::Error;
 
 pub const MAX_DAG_ID_BYTES: usize = 64;
@@ -41,6 +41,7 @@ impl JobKind {
 
 /// Declarative unit of bounded work.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct JobSpec {
     pub id: String,
     pub kind: JobKind,
@@ -57,6 +58,7 @@ const fn default_attempts() -> u16 {
 
 /// Directed edge where `from` must succeed before `to` can run.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Dependency {
     pub from: String,
     pub to: String,
@@ -64,6 +66,7 @@ pub struct Dependency {
 
 /// Complete user-submitted directed acyclic graph.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct DagSpec {
     pub id: String,
     pub jobs: Vec<JobSpec>,
@@ -72,7 +75,7 @@ pub struct DagSpec {
 }
 
 impl DagSpec {
-    /// Validates identifiers, payloads, edge endpoints, and acyclicity in O(V + E).
+    /// Validate identifiers/payloads/edges and deterministic order in O((V + E) log V).
     pub fn validate(&self) -> Result<Vec<String>, ValidationError> {
         validate_identifier(&self.id, MAX_DAG_ID_BYTES)?;
         if self.jobs.is_empty() || self.jobs.len() > MAX_JOBS_PER_DAG {
@@ -98,7 +101,11 @@ impl DagSpec {
             }
         }
 
+        let mut unique_edges = HashSet::new();
         for edge in &self.dependencies {
+            if !unique_edges.insert((&edge.from, &edge.to)) {
+                return Err(ValidationError::DuplicateDependency);
+            }
             if edge.from == edge.to {
                 return Err(ValidationError::Cycle);
             }
@@ -190,6 +197,8 @@ pub struct DagSnapshot {
 
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
 pub enum ValidationError {
+    #[error("duplicate dependency edge")]
+    DuplicateDependency,
     #[error("identifier must contain 1..=64 ASCII letters, numbers, dashes, or underscores: {0}")]
     InvalidIdentifier(String),
     #[error("DAG must contain 1..=1000 jobs")]
