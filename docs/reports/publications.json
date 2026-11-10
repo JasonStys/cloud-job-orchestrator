@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "project": "cloud-job-orchestrator",
+  "author": "Jason Stys",
+  "editionDate": "2026-11-09",
+  "sourceBaseline": "c93ca92be7ffa6bdd4e44f0773cae5146a57ecf4",
+  "sourceUrl": "https://github.com/JasonStys/cloud-job-orchestrator/tree/c93ca92be7ffa6bdd4e44f0773cae5146a57ecf4",
+  "functionalEvidenceBaseline": "c93ca92be7ffa6bdd4e44f0773cae5146a57ecf4",
+  "evidenceObservedAt": "2026-11-10T05:25:40.628667+00:00",
+  "workflowEvidence": [
+    {
+      "conclusion": "success",
+      "databaseId": 42718227263,
+      "event": "push",
+      "headSha": "c93ca92be7ffa6bdd4e44f0773cae5146a57ecf4",
+      "name": "CI",
+      "status": "completed",
+      "url": "https://github.com/JasonStys/cloud-job-orchestrator/actions/runs/42718227263"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 42718227181,
+      "event": "push",
+      "headSha": "c93ca92be7ffa6bdd4e44f0773cae5146a57ecf4",
+      "name": "CodeQL",
+      "status": "completed",
+      "url": "https://github.com/JasonStys/cloud-job-orchestrator/actions/runs/42718227181"
+    }
+  ],
+  "summary": "Preview validated DAG structure, inspect coherent job/event snapshots and review bounded unmet-parent, retry and lease evidence. Added real PostgreSQL API/worker execution and static-site delivery checks.",
+  "rationale": "Turns workflow state into actionable diagnosis while keeping planning read-only. Inspection reports omit payloads, results and lease tokens; deployment still supplies a trusted identity/network/TLS boundary.",
+  "limitations": [
+    "Trusted reference control plane; authentication, authorization, tenant separation and TLS are deployment responsibilities, not provided hosted services.",
+    "Workers execute only bounded delay, SHA-256 checksum and uppercase operations; this is not a general remote command runner.",
+    "Dependency waves are structural, not duration, concurrency or fairness forecasts. Captured countdowns are not live and do not reap leases.",
+    "Inspection omits payloads, results and lease tokens, but other existing endpoints expose job results; inspection redaction is not access control."
+  ],
+  "documents": [
+    {
+      "filename": "project-guide.docx",
+      "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "bytes": 46002,
+      "sha256": "11fa5c52e49a28ab23ff95bc052ecddbf0e26696c840156488418c2f95acd499",
+      "sourceBaseline": "c93ca92be7ffa6bdd4e44f0773cae5146a57ecf4",
+      "visualReview": {
+        "approved": true,
+        "method": "Every rendered page individually viewed at readable original resolution",
+        "pageCount": 6,
+        "renderedPageSha256": {
+          "page-1.png": "0c29b30f03254f833491d8d392874eb647b80df65d018e672821da75580294db",
+          "page-2.png": "999fb1190422b9580889c789a24ee04449a81ef666e9ee155f03858815c1b711",
+          "page-3.png": "43673e19569bc69a67b7b1fba5d4f355edcf1b661431009fdaa47c92cbaf10e3",
+          "page-4.png": "80f585894fa49e3be38aa2da64f989f7564cfbd3216ed731de1bcb1fb3329d25",
+          "page-5.png": "330bbcd803f5e016d66df61e74da38c9616ddad9491d4d3e5a50c999680966ca",
+          "page-6.png": "adfb796b0a0b969a0a952d58eb3721f03ad8f4df2985e7e540622418461f759a"
+        }
+      }
+    }
+  ],
+  "scope": "Reviewed documentation editions of the cited source. Checksums identify bytes, not authorship. Historical measurements retain their own dates; integration CI must be checked separately."
+}

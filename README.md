@@ -58,50 +58,50 @@ Open `http://127.0.0.1:8080` for the operations dashboard. The Compose credentia
 
 ## API summary
 
-| Endpoint | Purpose |
-|---|---|
-| `GET /health/live` | Process liveness. |
-| `GET /health/ready` | Database readiness. |
-| `GET /metrics` | Prometheus-compatible readiness metric. |
-| `POST /v1/dags` | Validate and atomically submit a DAG. |
-| `GET /v1/dags` | List DAG IDs using a bounded keyset page. |
-| `GET /v1/dags/{id}` | Read a stable job-state snapshot. |
-| `POST /v1/plans` | Validate and preview structural dependency waves without submission/execution. |
+| Endpoint                       | Purpose                                                                                 |
+| ------------------------------ | --------------------------------------------------------------------------------------- |
+| `GET /health/live`             | Process liveness.                                                                       |
+| `GET /health/ready`            | Database readiness.                                                                     |
+| `GET /metrics`                 | Prometheus-compatible readiness metric.                                                 |
+| `POST /v1/dags`                | Validate and atomically submit a DAG.                                                   |
+| `GET /v1/dags`                 | List DAG IDs using a bounded keyset page.                                               |
+| `GET /v1/dags/{id}`            | Read a stable job-state snapshot.                                                       |
+| `POST /v1/plans`               | Validate and preview structural dependency waves without submission/execution.          |
 | `GET /v1/dags/{id}/inspection` | Capture dependencies, state, countdowns and newest 200 event metadata records together. |
-| `POST /v1/dags/{id}/cancel` | Cancel unfinished jobs and revoke leases. |
-| `POST /v1/leases/claim` | Claim one eligible job. |
-| `POST /v1/leases/heartbeat` | Extend a live owner/token lease. |
-| `POST /v1/leases/complete` | Commit a bounded result and release children. |
-| `POST /v1/leases/fail` | Retry with backoff or dead-letter. |
+| `POST /v1/dags/{id}/cancel`    | Cancel unfinished jobs and revoke leases.                                               |
+| `POST /v1/leases/claim`        | Claim one eligible job.                                                                 |
+| `POST /v1/leases/heartbeat`    | Extend a live owner/token lease.                                                        |
+| `POST /v1/leases/complete`     | Commit a bounded result and release children.                                           |
+| `POST /v1/leases/fail`         | Retry with backoff or dead-letter.                                                      |
 
 The full request, response, and error contract is in [API](docs/API.md).
 
 ## Repository map
 
-| Path | Responsibility |
-|---|---|
-| `src/domain.rs` | Serializable DAG types, identifier/payload policy, and O(V + E) validation. |
-| `src/scheduler.rs` | Deterministic heap scheduler and lease state-machine reference implementation. |
-| `src/store.rs` | PostgreSQL migrations, transactional claims, CAS heartbeats/results, recovery, and pagination. |
-| `src/http.rs` | Versioned Axum routes, error mapping, request IDs, tracing, and same-origin dashboard serving. |
-| `src/inspection.rs` | Read-only dependency planning and captured blocker/lease/retry explanations. |
-| `src/database.rs` | Pinned PostgreSQL-only SQLx imports; unrelated drivers/macros are absent. |
-| `src/worker.rs` | Fixed safe-operation executor; no shell or arbitrary process capability. |
-| `src/bin/orchestratord.rs` | Control-plane process entry point. |
-| `src/bin/orchestrator_worker.rs` | Durable polling worker entry point. |
-| `src/bin/orchestratorctl.rs` | Validation, submission, status, cancellation, and reaping CLI. |
-| `migrations/` | Relational state machine, constraints, append-only events, and claim/expiry indexes. |
-| `tests/` | Property, state-machine, PostgreSQL concurrency, and lease-expiry tests. |
-| `tests/inspection.rs`, `web/browser/dashboard.spec.ts` | Independent graph/countdown/CLI oracles and desktop/mobile operator journeys. |
-| `web/` | Strict TypeScript dashboard, accessible HTML/CSS, and Node tests. |
-| `scripts/` | Backup, guarded restore, smoke test, documentation index, and policy validation. |
-| `scripts/verify-live.mjs` | Actual owned API/dashboard/worker/PostgreSQL acceptance with exact output checks. |
-| `infra/k8s/` | Restricted workloads, service, probes, resource limits, PDB, HPA, and network policy. |
-| `infra/terraform/` | Version-pinned namespace/configuration module with validated variables. |
-| `.github/workflows/` | Cross-platform, integration, infrastructure, container, audit, and CodeQL gates. |
-| `docs/` | Architecture, API, schema, security, test, operations, recovery, limitations, ADR, and evidence. |
-| `docs/WORKFLOW_INSPECTION.md` | End-to-end planning/inspection guide, fields, complexity and limits. |
-| `docs/reports/PRACTICAL_WORKFLOWS_20261109.md` | Observed local evidence and explicit hosted acceptance boundaries. |
+| Path                                                   | Responsibility                                                                                   |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `src/domain.rs`                                        | Serializable DAG types, identifier/payload policy, and O(V + E) validation.                      |
+| `src/scheduler.rs`                                     | Deterministic heap scheduler and lease state-machine reference implementation.                   |
+| `src/store.rs`                                         | PostgreSQL migrations, transactional claims, CAS heartbeats/results, recovery, and pagination.   |
+| `src/http.rs`                                          | Versioned Axum routes, error mapping, request IDs, tracing, and same-origin dashboard serving.   |
+| `src/inspection.rs`                                    | Read-only dependency planning and captured blocker/lease/retry explanations.                     |
+| `src/database.rs`                                      | Pinned PostgreSQL-only SQLx imports; unrelated drivers/macros are absent.                        |
+| `src/worker.rs`                                        | Fixed safe-operation executor; no shell or arbitrary process capability.                         |
+| `src/bin/orchestratord.rs`                             | Control-plane process entry point.                                                               |
+| `src/bin/orchestrator_worker.rs`                       | Durable polling worker entry point.                                                              |
+| `src/bin/orchestratorctl.rs`                           | Validation, submission, status, cancellation, and reaping CLI.                                   |
+| `migrations/`                                          | Relational state machine, constraints, append-only events, and claim/expiry indexes.             |
+| `tests/`                                               | Property, state-machine, PostgreSQL concurrency, and lease-expiry tests.                         |
+| `tests/inspection.rs`, `web/browser/dashboard.spec.ts` | Independent graph/countdown/CLI oracles and desktop/mobile operator journeys.                    |
+| `web/`                                                 | Strict TypeScript dashboard, accessible HTML/CSS, and Node tests.                                |
+| `scripts/`                                             | Backup, guarded restore, smoke test, documentation index, and policy validation.                 |
+| `scripts/verify-live.mjs`                              | Actual owned API/dashboard/worker/PostgreSQL acceptance with exact output checks.                |
+| `infra/k8s/`                                           | Restricted workloads, service, probes, resource limits, PDB, HPA, and network policy.            |
+| `infra/terraform/`                                     | Version-pinned namespace/configuration module with validated variables.                          |
+| `.github/workflows/`                                   | Cross-platform, integration, infrastructure, container, audit, and CodeQL gates.                 |
+| `docs/`                                                | Architecture, API, schema, security, test, operations, recovery, limitations, ADR, and evidence. |
+| `docs/WORKFLOW_INSPECTION.md`                          | End-to-end planning/inspection guide, fields, complexity and limits.                             |
+| `docs/reports/PRACTICAL_WORKFLOWS_20261109.md`         | Observed local evidence and explicit hosted acceptance boundaries.                               |
 
 Every source file begins with a purpose/function/variable header. [The generated code index](docs/CODE_INDEX.md) records exact declaration line locations and CI fails when it is stale.
 
@@ -128,3 +128,9 @@ This is a portfolio-grade reference control plane, not a hosted multi-tenant job
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Documentation editions
+
+Start with the [organized handbook](docs/handbook.md) for current usage, design, security and test guidance. Reviewed downloadable editions: [project-guide.docx](docs/reports/project-guide.docx).
+
+[Publication identities and source scope](docs/reports/publications.json) · [Documentation validation record](docs/reports/documentation-refresh-2026-11-09.md). Historical results retain their own tested revision and date.
