@@ -133,10 +133,17 @@ jobs:
         run: bash -n scripts/backup.sh scripts/restore-drill.sh scripts/smoke-test.sh
       - name: Run ShellCheck
         run: shellcheck scripts/backup.sh scripts/restore-drill.sh scripts/smoke-test.sh
-      - name: Install Bats
-        run: sudo apt-get update && sudo apt-get install --yes bats
+      - name: Check out exact upstream Bats without a global package install
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: bats-core/bats-core
+          ref: f7defb94362f2053a3e73d13086a167448ea9133 # upstream v1.10.0
+          path: .runtime/bats-core
+          persist-credentials: false
+      - name: Verify the actual pinned Bats version
+        run: test "$(.runtime/bats-core/bin/bats --version)" = 'Bats 1.10.0'
       - name: Run recovery guard tests
-        run: bats scripts/tests/recovery.bats
+        run: .runtime/bats-core/bin/bats scripts/tests/recovery.bats
       - name: Verify the read-only advisory gate cannot mask warnings
         run: node --test scripts/tests/rustsec-policy.test.mjs
       - name: Verify generated evidence is current
