@@ -25,14 +25,6 @@ function ancestors(path) {
 
 function readRegular(path, maximum) {
   ancestors(dirname(path));
-  const named = fs.lstatSync(path);
-  if (
-    named.isSymbolicLink() ||
-    !named.isFile() ||
-    named.nlink !== 1 ||
-    named.size > maximum
-  )
-    throw new Error("Linked or oversized input refused.");
   const descriptor = fs.openSync(
     path,
     fs.constants.O_RDONLY |
@@ -40,10 +32,16 @@ function readRegular(path, maximum) {
       (fs.constants.O_NONBLOCK ?? 0),
   );
   try {
+    // Open first, then bind both identities. Every byte comes from this same bounded descriptor.
+    const named = fs.lstatSync(path);
     const actual = fs.fstatSync(descriptor);
     if (
+      named.isSymbolicLink() ||
+      !named.isFile() ||
+      named.nlink !== 1 ||
       !actual.isFile() ||
       actual.nlink !== 1 ||
+      actual.size > maximum ||
       actual.dev !== named.dev ||
       actual.ino !== named.ino ||
       actual.size !== named.size

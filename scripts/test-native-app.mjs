@@ -157,6 +157,8 @@ async function showCompleted(page) {
     .poll(
       async () => {
         await page.locator("#refresh").click();
+        // Refresh clears stale rows synchronously; observe only its completed captured response.
+        await expect(page.locator("#refresh")).toBeEnabled({ timeout: 5000 });
         return (await page.locator("#jobs").innerText()).includes("succeeded");
       },
       { timeout: 15_000, intervals: [100, 200, 500] },

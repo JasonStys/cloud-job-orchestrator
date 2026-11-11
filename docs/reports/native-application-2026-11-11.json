@@ -63,5 +63,12 @@
     "Single trusted OS-owner plaintext PostgreSQL profile; open only owned/trusted clusters",
     "Closed-tree admission limits are not continuous storage quotas or concurrent namespace protection",
     "Newest200events may omit older history; results/inspection are separate captures; exports are not full backups"
-  ]
+  ],
+  "firstHostedCorrections": {
+    "originalRun": 43016452032,
+    "nativeOracle": "Wait for original Refresh completion before interpreting cleared captured rows; same15s observation deadline",
+    "boundaryTests": 37,
+    "browserJourneys": 16,
+    "codeql": "Three actual file-system-race findings repaired with descriptor-first bounded reads; processed fresh scans pending, none suppressed"
+  }
 }

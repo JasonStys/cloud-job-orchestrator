@@ -16,6 +16,9 @@ import {
 } from "node:fs/promises";
 import { dirname, join, resolve, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+
+const { readRegular } = createRequire(import.meta.url)("../desktop/files.cjs");
 
 const run = promisify(execFile);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -101,16 +104,8 @@ async function fingerprint(directory) {
       if (!info.isDirectory() || info.isSymbolicLink())
         throw new Error("Linked source ancestor refused.");
     }
-    const info = await lstat(path);
-    if (
-      !info.isFile() ||
-      info.isSymbolicLink() ||
-      info.nlink !== 1 ||
-      info.size > (directory === root ? 32 : 64) * 1024 * 1024
-    )
-      throw new Error("Invalid bounded source input.");
     rows[relative(directory, path).replaceAll("\\", "/")] = createHash("sha256")
-      .update(await readFile(path))
+      .update(readRegular(path, (directory === root ? 32 : 64) * 1024 * 1024))
       .digest("hex");
   }
   return rows;
@@ -198,7 +193,9 @@ if (
 )
   throw new Error("Hosted native build requires exact clean workflow source.");
 const snapshot = await fingerprint(root);
-const sdk = JSON.parse(await readFile(join(postgres, "SDK.json"), "utf8"));
+const sdk = JSON.parse(
+  readRegular(join(postgres, "SDK.json"), 512 * 1024).toString("utf8"),
+);
 if (
   sdk.schema !== 2 ||
   sdk.version !== "18.6" ||
@@ -223,15 +220,10 @@ for (const [name, digest] of Object.entries({
     name.split("/").some((part) => !part || part === "." || part === "..")
   )
     throw new Error("Invalid provider inventory path.");
-  const path = join(postgres, ...name.split("/")),
-    info = await lstat(path);
+  const path = join(postgres, ...name.split("/"));
   if (
-    !info.isFile() ||
-    info.isSymbolicLink() ||
-    info.nlink !== 1 ||
-    info.size > 64 * 1024 * 1024 ||
     createHash("sha256")
-      .update(await readFile(path))
+      .update(readRegular(path, 64 * 1024 * 1024))
       .digest("hex") !== digest
   )
     throw new Error(

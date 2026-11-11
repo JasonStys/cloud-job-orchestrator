@@ -86,3 +86,20 @@ push/PR runs; only bounded proof/screenshots are retained for one day. A trusted
 required to retain a complete unsigned package.
 
 Primary references are linked in the [native guide](../native-application.md).
+
+## First hosted acceptance corrections
+
+The first native CI run reached the real dashboard but the completion oracle read the jobs table
+immediately after clicking Refresh. The application intentionally clears stale rows before its
+asynchronous response completes; repeatedly clearing and reading that transient view timed out on
+the hosted runner. The oracle now requires Refresh to become enabled before interpreting the new
+captured rows, keeping the same15-second worker observation deadline. A held-response browser
+regression verifies both the empty/disabled intermediate state and the completed rendered state.
+This was a consumer synchronization error, not evidence of a failed PostgreSQL worker.
+
+Actual CodeQL also identified three check-then-open locations. Native file reads now open first,
+bind the named path to that same regular, single-link descriptor, and consume bounded bytes only
+from that descriptor. The source/runtime fingerprint builder reuses this reader instead of reopening
+paths after checking them. A real replacement-after-open fixture must fail while preserving both
+the old file and its replacement. No query or finding is suppressed; fresh processed scans remain
+required before acceptance.

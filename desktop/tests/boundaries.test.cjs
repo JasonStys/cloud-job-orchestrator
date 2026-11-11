@@ -124,3 +124,29 @@ test("actual malformed UTF8 is refused without silently changing document bytes"
   fs.writeFileSync(file, Buffer.from('\ufeff{"x":"telemetry"}', "utf8"));
   assert.equal(readUtf8(file, 100), '{"x":"telemetry"}');
 });
+
+test("descriptor-first read refuses an actual name replacement before consuming bytes", () => {
+  const root = fs.mkdtempSync(join(tmpdir(), "cjo-replacement-read-"));
+  const file = join(root, "input.json"),
+    retained = join(root, "retained.json");
+  fs.writeFileSync(file, "original", { flag: "wx" });
+  const originalOpen = fs.openSync;
+  let replaced = false;
+  fs.openSync = function (path, ...args) {
+    const descriptor = originalOpen.call(fs, path, ...args);
+    if (path === file && !replaced) {
+      replaced = true;
+      fs.renameSync(file, retained);
+      fs.writeFileSync(file, "new-name", { flag: "wx" });
+    }
+    return descriptor;
+  };
+  try {
+    assert.throws(() => readRegular(file, 100), /identity/);
+  } finally {
+    fs.openSync = originalOpen;
+  }
+  assert.equal(replaced, true);
+  assert.equal(fs.readFileSync(retained, "utf8"), "original");
+  assert.equal(fs.readFileSync(file, "utf8"), "new-name");
+});
