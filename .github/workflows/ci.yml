@@ -137,6 +137,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install --yes bats
       - name: Run recovery guard tests
         run: bats scripts/tests/recovery.bats
+      - name: Verify the read-only advisory gate cannot mask warnings
+        run: node --test scripts/tests/rustsec-policy.test.mjs
       - name: Verify generated evidence is current
         run: git diff --exit-code
 
@@ -185,12 +187,14 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-      checks: write
-      issues: write
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Audit Cargo.lock
-        uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install pinned advisory CLI with its locked dependency graph
+        run: cargo install cargo-audit --version 0.23.0 --locked
+      - name: Audit Cargo.lock and fail on vulnerabilities or informational warnings
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          cargo audit --file Cargo.lock --deny warnings --json | tee artifacts/rustsec-audit.json
