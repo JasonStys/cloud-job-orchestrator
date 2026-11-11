@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "repository": "cloud-job-orchestrator",
+  "runtimeVersion": "1.1.0",
+  "runtimeSource": "60a08d2d059dc4cf813e1b96029dd42ec76dc067",
+  "createdAt": "2026-11-11T14:11:29.546Z",
+  "author": "Jason Stys",
+  "document": "windows-application-guide-1.1.0.docx",
+  "sha256": "6352037bbc67485220bd6c0ae6959b685b22ee2243dacf2c782ba485cc022b62",
+  "screenshots": [
+    {
+      "file": "native-results.png",
+      "sha256": "425295d47b1721c9d246111e9b50a496ddcb41e6dff27fe7910309b5fd46112a",
+      "width": 1280,
+      "height": 900,
+      "caption": "Actual installed workers completed the release-verification workflow and captured its literal checksum and label results."
+    },
+    {
+      "file": "native-retained-work.png",
+      "sha256": "a0248768b5a80ec9916aea329825eb14618e962f15c6df52ff9da6ab73131d1a",
+      "width": 1280,
+      "height": 900,
+      "caption": "After reopening the same test workspace, the app shows the completed timed job and a dependent job still genuinely ready; Quit does not pretend that unclaimed work completed."
+    }
+  ],
+  "snippets": [
+    {
+      "file": "src/native_database.rs",
+      "first": 321,
+      "last": 332,
+      "sha256": "416de5f2cbac573aaa72c8fb76398d17b8b0580a12f054c2fdda58790facd617",
+      "url": "https://github.com/JasonStys/cloud-job-orchestrator/blob/60a08d2d059dc4cf813e1b96029dd42ec76dc067/src/native_database.rs#L321"
+    }
+  ],
+  "observedTests": [
+    {
+      "name": "Actual installed workflows",
+      "observed": "Two actual installed launches passed real PostgreSQL 18.6 worker outputs, import/export refusals, durable reopening, repeated Quit and retained-work completion. Outside and inherited-proxy requests were zero.",
+      "result": "Passed"
+    },
+    {
+      "name": "Original core and source gates",
+      "observed": "Original Rust tests, real hosted PostgreSQL migrations/leases, dashboard/browser, Terraform/Compose and recovery gates passed. The actual RustSec advisory was patched; fresh pinned audit reported zero vulnerabilities/warnings.",
+      "result": "Passed"
+    },
+    {
+      "name": "Assets and current security",
+      "observed": "Provider/download hashes, complete installed-byte identity, current exact-main workflows and processed raw CodeQL results passed with zero open main alerts.",
+      "result": "Passed"
+    },
+    {
+      "name": "Launch and data boundary",
+      "observed": "Individual Desktop and Start-menu targets verified. Only synthetic profiles were exercised; installed EXE tests are distinct from ordinary default-profile shortcut activation.",
+      "result": "Passed"
+    }
+  ],
+  "visualReview": {
+    "approved": true,
+    "reviewer": "audit_apps",
+    "ooxmlSchema": "passed",
+    "pages": [
+      {
+        "page": 1,
+        "sha256": "f6025aa50323138bb5d8993164002d070113a25187a82abebe5fa77221d20a34"
+      },
+      {
+        "page": 2,
+        "sha256": "3998d5183dbdfdae31f5b510b1a006166075207f1a0a05a73a681db0a3842724"
+      },
+      {
+        "page": 3,
+        "sha256": "f1f5f69ddd308e13f995ad90c92328fd9c6adf50fc612a158786fd4dc6eedfdb"
+      },
+      {
+        "page": 4,
+        "sha256": "ab6e3bd3df834e249758bfbafcc67a5be64f6aa891ee2cbb08b6b378d249e8f7"
+      }
+    ],
+    "scope": "Every current page reviewed individually; prior inspection carried only by exact unchanged page hashes. Actual installed synthetic workflows, no ordinary-user profile replay.",
+    "checkedUtc": "2026-11-11T15:14:43.988231+00:00"
+  }
+}
