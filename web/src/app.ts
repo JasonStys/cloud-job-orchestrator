@@ -1,7 +1,13 @@
 /** File: Jason Stys: read-only DAG operator and pre-submission planning journeys.
  * Functions: refresh/load/render maintain captured state; handlers guard stale responses.
  * Variables: generation identifies latest navigation; cursors are tab-local; nothing is persisted. */
-import { fetchDagPage, fetchInspection, previewPlan } from "./api.js";
+import {
+  fetchDagPage,
+  fetchInspection,
+  fetchSnapshot,
+  nativeBridge,
+  previewPlan,
+} from "./api.js";
 import {
   stateClass,
   summarizeStates,
@@ -25,9 +31,12 @@ const cursors: (string | null)[] = [null];
 let nextCursor: string | null = null;
 let generation = 0;
 let captured: DagInspection | null = null;
+let capturedResults: DagSnapshot | null = null;
 
 function clearInspection(): void {
   captured = null;
+  capturedResults = null;
+  element<HTMLButtonElement>("#native-results").disabled = true;
   download.disabled = true;
   for (const id of ["summary", "jobs", "explanations", "events"])
     element(`#${id}`).replaceChildren();
@@ -56,6 +65,7 @@ function renderSnapshot(snapshot: DagSnapshot): void {
         job.state.replaceAll("_", " "),
         `${job.attempts}/${job.max_attempts}`,
         job.lease_owner ?? "—",
+        job.result ?? "—",
       ]),
     ),
   );
@@ -113,9 +123,17 @@ function renderInspection(value: DagInspection): void {
 
 /** Load one workflow; late responses cannot replace newer selections or enable stale exports. */
 async function load(id: string, request: number): Promise<void> {
-  const value = await fetchInspection(id);
+  const [value, results] = await Promise.all([
+    fetchInspection(id),
+    nativeBridge() ? fetchSnapshot(id) : Promise.resolve(null),
+  ]);
   if (generation !== request) return;
   renderInspection(value);
+  if (results) {
+    capturedResults = results;
+    renderSnapshot(results);
+    element<HTMLButtonElement>("#native-results").disabled = false;
+  }
   status.textContent = `Showing ${id}`;
 }
 
@@ -189,6 +207,15 @@ next.addEventListener("click", () => {
 });
 download.addEventListener("click", () => {
   if (captured === null) return;
+  const bridge = nativeBridge();
+  if (bridge) {
+    void bridge
+      .exportCaptured(captured.snapshot.id, captured)
+      .catch((error) => {
+        status.textContent = String(error);
+      });
+    return;
+  }
   const url = URL.createObjectURL(
     new Blob([JSON.stringify(captured, null, 2)], { type: "application/json" }),
   );
@@ -244,4 +271,170 @@ element<HTMLFormElement>("#plan-form").addEventListener("submit", (event) => {
           error instanceof Error ? error.message : "Invalid workflow";
     });
 });
+/** Native controls operate the original durable API; prepared cases are inputs, never a fake backend. */
+const bridge = nativeBridge();
+if (bridge) {
+  element<HTMLElement>("#native-tools").hidden = false;
+  element<HTMLElement>("#native-authoring").hidden = false;
+  const notice = element<HTMLElement>("#native-status");
+  async function inspectOwner(): Promise<void> {
+    const value = (await bridge!.request("/native/status")) as {
+      version: string;
+      pause_requested: boolean;
+      active_jobs: number;
+      workers: number;
+    };
+    notice.textContent = `Version ${value.version} · ${value.pause_requested ? "Pause requested" : "Workers enabled"} · ${value.active_jobs} active · ${value.workers} workers. Refresh for a new captured observation.`;
+  }
+  async function operation(action: () => Promise<unknown>): Promise<void> {
+    const buttons = [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        "#native-tools button, #native-authoring button",
+      ),
+    ];
+    buttons.forEach((button) => {
+      button.disabled = true;
+    });
+    try {
+      await action();
+      await inspectOwner();
+      await refresh();
+    } catch (error) {
+      notice.textContent =
+        error instanceof Error
+          ? error.message
+          : "Operation failed; refresh retained state.";
+    } finally {
+      buttons.forEach((button) => {
+        button.disabled = false;
+      });
+      element<HTMLButtonElement>("#native-results").disabled =
+        capturedResults === null;
+    }
+  }
+  for (const [selector, paused] of [
+    ["#native-start", false],
+    ["#native-pause", true],
+  ] as const)
+    element(selector).addEventListener(
+      "click",
+      () =>
+        void operation(() =>
+          bridge.request("/native/workers", "POST", { paused }),
+        ),
+    );
+  element("#native-reap").addEventListener(
+    "click",
+    () => void operation(() => bridge.request("/native/reap", "POST", {})),
+  );
+  element("#native-cancel").addEventListener(
+    "click",
+    () =>
+      void operation(async () => {
+        if (
+          !select.value ||
+          !confirm(
+            `Cancel ${select.value}? Committed results/history remain; running leases are revoked.`,
+          )
+        )
+          return;
+        await bridge.request(`/v1/dags/${select.value}/cancel`, "POST", {});
+      }),
+  );
+  element("#native-quit").addEventListener("click", () => void bridge.quit());
+  element("#native-prepare").addEventListener("click", () => {
+    const scenario = element<HTMLSelectElement>("#scenario").value;
+    const data =
+      scenario === "unicode"
+        ? {
+            id: "unicode-output-check",
+            jobs: [
+              {
+                id: "expand",
+                kind: "uppercase",
+                payload: "ΐ".repeat(2048),
+                max_attempts: 1,
+              },
+              { id: "downstream", kind: "checksum", payload: "abc" },
+            ],
+            dependencies: [{ from: "expand", to: "downstream" }],
+          }
+        : scenario === "telemetry"
+          ? {
+              id: "telemetry-processing",
+              jobs: [
+                {
+                  id: "normalize",
+                  kind: "uppercase",
+                  payload: "sensor a:ready",
+                },
+                {
+                  id: "fingerprint",
+                  kind: "checksum",
+                  payload: "sensor a:ready",
+                },
+              ],
+              dependencies: [{ from: "normalize", to: "fingerprint" }],
+            }
+          : scenario === "delayed"
+            ? {
+                id: "timed-verification",
+                jobs: [
+                  { id: "wait", kind: "delay", payload: "2500" },
+                  { id: "check", kind: "checksum", payload: "abc" },
+                ],
+                dependencies: [{ from: "wait", to: "check" }],
+              }
+            : {
+                id: "release-verification",
+                jobs: [
+                  { id: "label", kind: "uppercase", payload: "release ready" },
+                  { id: "verify", kind: "checksum", payload: "abc" },
+                ],
+                dependencies: [{ from: "label", to: "verify" }],
+              };
+    input.value = JSON.stringify(data, null, 2);
+    input.dispatchEvent(new Event("input"));
+    notice.textContent =
+      "Prepared editable input only; preview and explicitly submit to persist it.";
+  });
+  element("#native-import").addEventListener(
+    "click",
+    () =>
+      void operation(async () => {
+        const text = await bridge.importWorkflow();
+        if (text !== null) {
+          input.value = text;
+          input.dispatchEvent(new Event("input"));
+        }
+      }),
+  );
+  element("#native-submit").addEventListener(
+    "click",
+    () =>
+      void operation(async () => {
+        if (new TextEncoder().encode(input.value).length > 1_000_000)
+          throw new Error("Workflow exceeds 1 MB");
+        await bridge.request("/v1/dags", "POST", input.value);
+      }),
+  );
+  element("#native-results").addEventListener("click", () => {
+    if (capturedResults)
+      void bridge
+        .exportCaptured(capturedResults.id, capturedResults)
+        .catch((error) => {
+          notice.textContent = String(error);
+        });
+  });
+  refreshButton.addEventListener(
+    "click",
+    () =>
+      void inspectOwner().catch((error) => {
+        notice.textContent = String(error);
+      }),
+  );
+  void inspectOwner().catch((error) => {
+    notice.textContent = String(error);
+  });
+}
 void refresh();

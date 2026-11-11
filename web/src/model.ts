@@ -15,6 +15,7 @@ export interface JobSnapshot {
   readonly attempts: number;
   readonly max_attempts: number;
   readonly lease_owner: string | null;
+  readonly result?: string | null;
 }
 
 export interface DagSnapshot {

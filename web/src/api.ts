@@ -1,6 +1,36 @@
 /** File: Provides typed fetch adapters for paginated DAG lists and snapshots. Functions: fetchDagIds and fetchSnapshot enforce HTTP success. Variables: baseUrl remains caller-controlled for tests and deployments. */
 import type { DagSnapshot, DagInspection, GraphPlan } from "./model.js";
 
+export interface NativeBridge {
+  request(route: string, method?: string, body?: unknown): Promise<unknown>;
+  importWorkflow(): Promise<string | null>;
+  exportCaptured(identifier: string, value: unknown): Promise<boolean>;
+  quit(): Promise<boolean>;
+}
+declare global {
+  interface Window {
+    readonly orchestratorNative?: NativeBridge;
+  }
+}
+
+/** The normal deployed API stays unchanged; only the bundled sandbox has this fixed IPC bridge. */
+export function nativeBridge(): NativeBridge | undefined {
+  return typeof window === "undefined" ? undefined : window.orchestratorNative;
+}
+
+async function send(route: string, init?: RequestInit): Promise<Response> {
+  const bridge = nativeBridge();
+  if (!bridge) return fetch(route, init);
+  const value = await bridge.request(
+    route,
+    init?.method ?? "GET",
+    typeof init?.body === "string" ? init.body : undefined,
+  );
+  return new Response(JSON.stringify(value), {
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 export interface DagListResponse {
   readonly items: readonly string[];
   readonly next_cursor: string | null;
@@ -12,7 +42,7 @@ export async function fetchDagPage(
   if (after !== null && !/^[A-Za-z0-9_-]{1,64}$/.test(after))
     throw new Error("invalid page cursor");
   return await checkedJson<DagListResponse>(
-    await fetch(
+    await send(
       `/v1/dags?limit=25${after === null ? "" : `&after=${encodeURIComponent(after)}`}`,
     ),
   );
@@ -22,7 +52,7 @@ export async function fetchInspection(id: string): Promise<DagInspection> {
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(id))
     throw new Error("invalid DAG identifier");
   return await checkedJson<DagInspection>(
-    await fetch(`/v1/dags/${encodeURIComponent(id)}/inspection`),
+    await send(`/v1/dags/${encodeURIComponent(id)}/inspection`),
   );
 }
 
@@ -31,10 +61,10 @@ export async function previewPlan(text: string): Promise<GraphPlan> {
     throw new Error("Plan exceeds 1 MB");
   const body: unknown = JSON.parse(text);
   return await checkedJson<GraphPlan>(
-    await fetch("/v1/plans", {
+    await send("/v1/plans", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: nativeBridge() ? text : JSON.stringify(body),
     }),
   );
 }
@@ -60,6 +90,6 @@ export async function fetchSnapshot(
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(dagId))
     throw new Error("invalid DAG identifier");
   return await checkedJson<DagSnapshot>(
-    await fetch(`${baseUrl}/v1/dags/${encodeURIComponent(dagId)}`),
+    await send(`${baseUrl}/v1/dags/${encodeURIComponent(dagId)}`),
   );
 }

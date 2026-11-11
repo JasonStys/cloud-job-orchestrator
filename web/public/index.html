@@ -21,6 +21,35 @@
           terminal state.
         </p>
       </header>
+      <section
+        class="panel"
+        id="native-tools"
+        aria-labelledby="native-title"
+        hidden
+      >
+        <h2 id="native-title">Local application · version 1.1.0</h2>
+        <p>
+          Two genuine local PostgreSQL workers run only Delay, Checksum and
+          Uppercase jobs. Start explicitly after submission. Pause lets current
+          work finish. Closing waits for real database and worker completion.
+        </p>
+        <p id="native-status" role="status">Inspecting owned service…</p>
+        <button id="native-start" type="button">Start workers</button>
+        <button id="native-pause" type="button">Pause workers</button>
+        <button id="native-reap" type="button">Recover expired leases</button>
+        <button id="native-cancel" type="button">
+          Cancel selected workflow
+        </button>
+        <button id="native-results" type="button" disabled>
+          Export captured results
+        </button>
+        <button id="native-quit" type="button">Quit application</button>
+        <p>
+          Owner-local plaintext workspace; no authenticated enterprise roles or
+          cloud task execution. Results and history remain after restart.
+          Created by Jason Stys · github.com/JasonStys.
+        </p>
+      </section>
       <section class="toolbar" aria-label="DAG controls">
         <label for="dag-select">Workflow</label>
         <select id="dag-select" aria-describedby="status"></select>
@@ -51,6 +80,7 @@
                 <th scope="col">State</th>
                 <th scope="col">Attempts</th>
                 <th scope="col">Lease owner</th>
+                <th scope="col">Captured result</th>
               </tr>
             </thead>
             <tbody id="jobs"></tbody>
@@ -105,6 +135,27 @@
           ></textarea
           ><button type="submit">Preview dependency plan</button>
         </form>
+        <div id="native-authoring" hidden>
+          <label for="scenario">Prepared workflow data</label>
+          <select id="scenario">
+            <option value="release">Release verification</option>
+            <option value="telemetry">Telemetry processing</option>
+            <option value="delayed">Timed dependency</option>
+            <option value="unicode">Unicode output constraint</option>
+          </select>
+          <button id="native-prepare" type="button">
+            Prepare example data
+          </button>
+          <button id="native-import" type="button">Import workflow JSON</button>
+          <button id="native-submit" type="button">
+            Submit edited workflow
+          </button>
+          <p>
+            Prepared examples are editable input data in this full application.
+            Change the workflow ID before reusing it; duplicate IDs are
+            preserved and refused.
+          </p>
+        </div>
         <p id="plan-status" role="status"></p>
         <ol id="plan-rows"></ol>
       </section>

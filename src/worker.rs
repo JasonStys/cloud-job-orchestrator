@@ -52,4 +52,14 @@ mod tests {
         assert_eq!(execute(&JobKind::Delay, "0").await.unwrap(), "slept:0ms");
         assert_eq!(execute(&JobKind::Checksum, "abc").await.unwrap().len(), 64);
     }
+
+    #[tokio::test]
+    async fn unicode_expansion_is_a_real_bounded_worker_failure() {
+        let input = "\u{390}".repeat(2048);
+        assert_eq!(input.len(), crate::domain::MAX_PAYLOAD_BYTES);
+        assert!(matches!(
+            execute(&JobKind::Uppercase, &input).await,
+            Err(super::WorkerError::ResultTooLarge)
+        ));
+    }
 }

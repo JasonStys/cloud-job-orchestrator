@@ -3,10 +3,13 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
 
 const repository = resolve(import.meta.dirname, "..");
-const sourceRoots = ["src", "tests", "web/src", "web/tests", "web/browser", "web/scripts", "scripts", "migrations"];
+const sourceRoots = ["src", "tests", "desktop", "web/src", "web/tests", "web/browser", "web/scripts", "scripts", "migrations"];
 const outputPath = resolve(repository, "docs/CODE_INDEX.md");
-const accepted = /\.(?:rs|ts|mjs|sh|bats|sql)$/;
+const accepted = /\.(?:rs|ts|mjs|cjs|py|ps1|sh|bats|sql)$/;
 const patterns = [
+  [/^\s*(?:async\s+)?def\s+([A-Za-z0-9_]+)/, "Python function"],
+  [/^\s*class\s+([A-Za-z0-9_]+)/, "Python type"],
+  [/^\s*function\s+([A-Za-z0-9_-]+)\s*\(/, "PowerShell function"],
   [/^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?fn\s+([A-Za-z0-9_]+)/, "function"],
   [/^\s*(?:export\s+)?(?:async\s+)?function\s+([A-Za-z0-9_]+)/, "function"],
   [/^\s*(?:pub\s+)?(?:struct|enum|trait)\s+([A-Za-z0-9_]+)/, "type"],

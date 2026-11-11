@@ -7,6 +7,32 @@ A production-minded control plane for safe directed-acyclic-graph (DAG) workload
 
 The project demonstrates backend and cloud engineering without exposing a remote command runner. Workers can execute only three bounded synthetic operations: delay (maximum five seconds), SHA-256 checksum, and uppercase transformation.
 
+## Full Windows application
+
+Version 1.1.0 adds a real native workspace using this same Rust API, PostgreSQL 18.6 and TypeScript
+dashboard. The complete portable package bundles its runtime; users launch `CloudJobOrchestrator.exe`
+without installing Rust, Node, PostgreSQL, an IDE or Docker. A visible startup window provides Help and
+safe Quit while the owned local database starts. Source validation, release delivery and installation
+remain separate steps; see [native usage, files, data and build guide](docs/native-application.md).
+
+Prepare or import editable workflow JSON, preview dependencies, submit explicitly, start/pause the
+two original workers, inspect committed results and attempt history, cancel work, recover expired
+leases and export exact captured results or operational evidence. Release/telemetry/timed/Unicode
+examples are input data inside the full app. The Unicode case exercises a genuine bounded-output
+failure and blocked dependent. A leased job finishes during Quit; queued work remains for restart.
+
+The identified per-user workspace is durable, plaintext and owned by one trusted OS user. Its
+credentials are generated per profile and kept outside Git and the renderer. The app refuses unknown
+nonempty data, existing aliases/hardlinks and installation-folder profiles without resetting them.
+It is an unsigned Windows x64 reference application, with no enterprise accounts, remote command
+execution, live cloud connection or clean-machine certification. Open only trusted owned PostgreSQL
+profiles; captured exports are private snapshots, not database backups.
+
+![Actual packaged native results, using fictional workflow data](docs/images/native-results.png)
+
+The [observed native validation report](docs/reports/native-application-2026-11-11.md) distinguishes
+actual compiled/relocated UI evidence from source tests and still-required exact hosted checks.
+
 ## What it demonstrates
 
 - Bounded graph validation and deterministic topological ordering; O((V + E) log V) including ordering.

@@ -1,6 +1,6 @@
 {
   "name": "cloud-job-orchestrator-quality-gates",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,4 +9,3 @@
     "validate": "node scripts/validate-repository.mjs && node scripts/validate-infrastructure.mjs"
   }
 }
-
