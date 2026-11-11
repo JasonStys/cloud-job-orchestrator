@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "repository": "cloud-job-orchestrator",
+  "version": "1.1.0",
+  "sourceBaseline": "66953562e528dd2e88397029a5092a57ac9bcda6",
+  "sourceStatus": "Dirty local development package honestly recorded; exact clean PR/main and installed acceptance remain separate",
+  "rust": {
+    "passed": 34,
+    "library": 25,
+    "inspection": 6,
+    "propertyTestCases": 3,
+    "locallyIgnoredPostgresCases": 4,
+    "clippy": "strict all targets passed",
+    "coveragePercent": null
+  },
+  "node": {
+    "boundaryTests": 36,
+    "presentationTests": 2,
+    "nativeDependencyAuditKnownVulnerabilities": 0
+  },
+  "python": {
+    "actualZipMethods": 6,
+    "maliciousNameSubcases": 10,
+    "runtimeDependency": "build-only standard library Python3.14.10"
+  },
+  "browsers": {
+    "passed": 12,
+    "projects": [
+      "chromium",
+      "firefox",
+      "webkit",
+      "mobile WebKit"
+    ],
+    "scope": "Original dashboard contract fixtures; separate from real native/PostgreSQL proof"
+  },
+  "compiledNative": {
+    "schema": 1,
+    "passed": true,
+    "version": "1.1.0",
+    "source": "66953562e528dd2e88397029a5092a57ac9bcda6",
+    "sourceDirty": true,
+    "actualLaunches": 2,
+    "normalExitCodes": [
+      0,
+      0
+    ],
+    "visibleNativeWindow": true,
+    "actualPostgres": "18.6",
+    "realWorkerOutputs": true,
+    "retainedWorkCompleted": true,
+    "capturedResultsSha256": "660853040e218db2abe65a752b2edbae0c85eb55df115b833d52e4c3852585ee",
+    "externalRequests": 0,
+    "inheritedProxyRequests": 0,
+    "normalUserProfileOpened": false,
+    "archiveSha256": "191281ab5504c26fa629aee32b0d4212e1a0cfc3c49490a0597832dab2147af2",
+    "archiveBytes": 259292440,
+    "checkpoint": "pilot-007-final"
+  },
+  "privacy": "Private capability never leaves owner stdin/direct RPC; explicit direct browser/Agent and inert-proxy proof. Post-readiness browser observation, not OS-wide traffic certification.",
+  "hosted": "No hosted passing claim before exact-source PR/main acceptance",
+  "limits": [
+    "Unsigned Windows x64 portable; no signing/clean-machine/OS-shell installation claim",
+    "Single trusted OS-owner plaintext PostgreSQL profile; open only owned/trusted clusters",
+    "Closed-tree admission limits are not continuous storage quotas or concurrent namespace protection",
+    "Newest200events may omit older history; results/inspection are separate captures; exports are not full backups"
+  ],
+  "firstHostedCorrections": {
+    "originalRun": 43016452032,
+    "nativeOracle": "Wait for original Refresh completion before interpreting cleared captured rows; same15s observation deadline",
+    "boundaryTests": 37,
+    "browserJourneys": 16,
+    "codeql": "Three actual file-system-race findings repaired with descriptor-first bounded reads; processed fresh scans pending, none suppressed"
+  }
+}

@@ -4,8 +4,8 @@ import { relative, resolve } from "node:path";
 
 const repository = resolve(import.meta.dirname, "..");
 const requiredDocs = ["README.md", "docs/ARCHITECTURE.md", "docs/API.md", "docs/DATA_MODEL.md", "docs/SCHEDULER.md", "docs/TESTING.md", "docs/SECURITY.md", "docs/OPERATIONS.md", "docs/DISASTER_RECOVERY.md", "docs/LIMITATIONS.md", "docs/RESEARCH.md", "docs/CODE_INDEX.md", "docs/reports/VALIDATION.md"];
-const sourceExtensions = /\.(?:rs|ts|mjs|sh|bats|sql|tf|ya?ml|html|css)$/;
-const excluded = new Set([".git", "node_modules", "target", "dist"]);
+const sourceExtensions = /\.(?:rs|ts|mjs|cjs|py|ps1|sh|bats|sql|tf|ya?ml|html|css)$/;
+const excluded = new Set([".git", "node_modules", "target", "dist", ".runtime", "release", "__pycache__"]);
 const problems = [];
 
 async function walk(directory) {
@@ -13,6 +13,7 @@ async function walk(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     if (excluded.has(entry.name)) continue;
     const path = resolve(directory, entry.name);
+    if (relative(repository, path).replaceAll("\\", "/") === "artifacts/native") continue;
     if (entry.isDirectory()) files.push(...await walk(path));
     else files.push(path);
   }

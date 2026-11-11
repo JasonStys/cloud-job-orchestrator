@@ -107,6 +107,31 @@ test("operator selects, preserves selection, pages, reads evidence and downloads
   ).toEqual([]);
 });
 
+test("refresh exposes an incomplete state until its real captured response is rendered", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator("#status")).toHaveText("Showing alpha");
+  let release: (() => void) | undefined;
+  await page.route("**/v1/dags?*", async (route) => {
+    await new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await route.fulfill({ json: { items: ["alpha"], next_cursor: null } });
+  });
+  const refresh = page.locator("#refresh");
+  await refresh.click();
+  await expect.poll(() => Boolean(release)).toBe(true);
+  await expect(refresh).toBeDisabled();
+  await expect(page.locator("#jobs tr")).toHaveCount(0);
+  // An immediate read after click is deliberately incomplete, not a completed-worker observation.
+  expect(await page.locator("#jobs").innerText()).toBe("");
+  release!();
+  await expect(refresh).toBeEnabled();
+  await expect(page.locator("#status")).toHaveText("Showing alpha");
+  await expect(page.locator("#jobs")).toContainText("ship");
+});
+
 test("planner handles invalid JSON, rejects HTTP failure and invalidates an edited in-flight draft", async ({
   page,
 }) => {

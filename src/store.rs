@@ -16,6 +16,11 @@ pub struct PostgresStore {
 }
 
 impl PostgresStore {
+    /// Close this native owner's pool only after its real HTTP/worker tasks have completed.
+    pub async fn close(&self) {
+        self.pool.close().await;
+    }
+
     #[cfg(test)]
     pub(crate) fn disconnected_test_store() -> Self {
         Self {
