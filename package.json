@@ -6,6 +6,6 @@
   "scripts": {
     "code-index": "node scripts/generate-code-index.mjs",
     "code-index:check": "node scripts/generate-code-index.mjs --check",
-    "validate": "node scripts/validate-repository.mjs && node scripts/validate-infrastructure.mjs"
+    "validate": "node --test scripts/publication-text.test.mjs scripts/tests/bats-source-policy.test.mjs scripts/tests/browser-environment.test.mjs && node scripts/validate-repository.mjs && node scripts/validate-infrastructure.mjs"
   }
 }

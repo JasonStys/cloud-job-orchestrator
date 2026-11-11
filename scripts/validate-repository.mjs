@@ -1,6 +1,7 @@
 /** File: Enforces documentation, source-header, workflow-pin, and portfolio-neutrality policies. Functions: walk and fail collect actionable violations. Variables: requiredDocs and sourceExtensions define the contract. */
 import { access, readdir, readFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
+import { publicationText } from "./publication-text.mjs";
 
 const repository = resolve(import.meta.dirname, "..");
 const requiredDocs = ["README.md", "docs/ARCHITECTURE.md", "docs/API.md", "docs/DATA_MODEL.md", "docs/SCHEDULER.md", "docs/TESTING.md", "docs/SECURITY.md", "docs/OPERATIONS.md", "docs/DISASTER_RECOVERY.md", "docs/LIMITATIONS.md", "docs/RESEARCH.md", "docs/CODE_INDEX.md", "docs/reports/VALIDATION.md"];
@@ -40,7 +41,10 @@ for (const file of await walk(repository)) {
   }
 }
 
-const searchable = (await Promise.all((await walk(repository)).filter((file) => !file.includes("package-lock.json")).map((file) => readFile(file, "utf8").catch(() => "")))).join("\n");
+const searchable = (await Promise.all((await walk(repository)).filter((file) => !file.includes("package-lock.json")).map((file) => {
+  const path = relative(repository, file).replaceAll("\\", "/");
+  return path.endsWith(".docx") ? publicationText(file, path) : readFile(file, "utf8").catch(() => "");
+}))).join("\n");
 if (/opto\s*22/i.test(searchable)) problems.push("portfolio-neutrality policy violation");
 if (problems.length) {
   console.error(problems.join("\n"));
