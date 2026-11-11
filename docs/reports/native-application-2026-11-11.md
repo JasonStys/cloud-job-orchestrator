@@ -95,7 +95,10 @@ asynchronous response completes; repeatedly clearing and reading that transient 
 the hosted runner. The oracle now requires Refresh to become enabled before interpreting the new
 captured rows, keeping the same15-second worker observation deadline. A held-response browser
 regression verifies both the empty/disabled intermediate state and the completed rendered state.
-This was a consumer synchronization error, not evidence of a failed PostgreSQL worker.
+This was a consumer synchronization error, not evidence of a failed PostgreSQL worker. A second
+hosted run passed that initial workflow and exposed the same immediate-read mistake in the Unicode
+dead-letter observation. Both now use one completion-aware refresh helper, and the initial workflow
+requires both independent expected worker outputs in the completed capture before advancing.
 
 Actual CodeQL also identified three check-then-open locations. Native file reads now open first,
 bind the named path to that same regular, single-link descriptor, and consume bounded bytes only

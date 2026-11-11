@@ -152,14 +152,24 @@ async function finish(application, page) {
   ).toBe(false);
   current = undefined;
 }
+async function refreshedRows(page) {
+  await page.locator("#refresh").click();
+  // Refresh clears stale rows synchronously; observe only its completed captured response.
+  await expect(page.locator("#refresh")).toBeEnabled({ timeout: 5000 });
+  return page.locator("#jobs").innerText();
+}
 async function showCompleted(page) {
   await expect
     .poll(
       async () => {
-        await page.locator("#refresh").click();
-        // Refresh clears stale rows synchronously; observe only its completed captured response.
-        await expect(page.locator("#refresh")).toBeEnabled({ timeout: 5000 });
-        return (await page.locator("#jobs").innerText()).includes("succeeded");
+        const rows = await refreshedRows(page);
+        return (
+          rows.includes("succeeded") &&
+          rows.includes("RELEASE READY") &&
+          rows.includes(
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+          )
+        );
       },
       { timeout: 15_000, intervals: [100, 200, 500] },
     )
@@ -258,13 +268,7 @@ try {
   await page.locator("#dag-select").selectOption("unicode-output-check");
   await page.locator("#native-start").click();
   await expect
-    .poll(
-      async () => {
-        await page.locator("#refresh").click();
-        return page.locator("#jobs").innerText();
-      },
-      { timeout: 10_000 },
-    )
+    .poll(() => refreshedRows(page), { timeout: 10_000 })
     .toContain("dead lettered");
   await expect(page.locator("#explanations")).toContainText("expand");
   await page.locator("#native-pause").click();
