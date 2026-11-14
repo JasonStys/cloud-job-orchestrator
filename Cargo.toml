@@ -53,7 +53,7 @@ uuid = { version = "1.22.0", features = ["serde", "v4"] }
 winapi-util = "=0.1.11"
 
 [target.'cfg(unix)'.dependencies]
-libc = "=0.2.189"
+libc = "=0.2.191"
 
 [dev-dependencies]
 http-body-util = "0.1.3"
